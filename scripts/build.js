@@ -28,6 +28,22 @@ async function getChartJsContent() {
   }
 }
 
+// Aggregate commit dates into the last N weeks (index 0 = oldest). Snapshot-time fixed.
+function aggregateWeeks(dates, weeksCount = 12) {
+  const now = Date.now();
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const buckets = new Array(weeksCount).fill(0);
+  const startBoundary = now - weeksCount * weekMs;
+  for (const d of dates) {
+    const t = new Date(d).getTime();
+    if (Number.isNaN(t) || t < startBoundary) continue;
+    const weeksAgo = Math.floor((now - t) / weekMs);
+    const idx = weeksCount - 1 - weeksAgo;
+    if (idx >= 0 && idx < weeksCount) buckets[idx]++;
+  }
+  return buckets;
+}
+
 // Clean and map repo nodes into dashboard-friendly structures
 function processRepos(nodes, overrides) {
   return nodes.map(node => {
@@ -39,22 +55,22 @@ function processRepos(nodes, overrides) {
       color: node.primaryLanguage.color
     } : null;
 
-    // Safety checks for commits
-    let lastCommit = null;
-    if (
-      node.defaultBranchRef &&
+    // Commit history: lastCommit + per-week heatmap buckets
+    const histNodes = (node.defaultBranchRef &&
       node.defaultBranchRef.target &&
       node.defaultBranchRef.target.history &&
-      node.defaultBranchRef.target.history.nodes &&
-      node.defaultBranchRef.target.history.nodes.length > 0
-    ) {
-      const commitNode = node.defaultBranchRef.target.history.nodes[0];
+      node.defaultBranchRef.target.history.nodes) || [];
+    let lastCommit = null;
+    if (histNodes.length > 0) {
+      const commitNode = histNodes[0];
       lastCommit = {
         message: commitNode.messageHeadline,
         date: commitNode.committedDate,
         author: commitNode.author ? commitNode.author.name : 'Unknown'
       };
     }
+    const commitDates = histNodes.map(n => n.committedDate).filter(Boolean);
+    const commitWeeks = aggregateWeeks(commitDates);
 
     // Merge manual overrides
     const description = override.description || node.description || '';
@@ -83,7 +99,8 @@ function processRepos(nodes, overrides) {
       pullRequests: node.pullRequests ? node.pullRequests.totalCount : 0,
       language: mainLang,
       tags: allTags,
-      lastCommit
+      lastCommit,
+      commitWeeks
     };
   });
 }
@@ -111,7 +128,7 @@ async function fetchGraphQL(token, cursor = null) {
             defaultBranchRef {
               name
               target { ... on Commit {
-                history(first: 1) { nodes { messageHeadline committedDate author { name } } }
+                history(first: 100) { nodes { messageHeadline committedDate author { name } } }
               } }
             }
           }

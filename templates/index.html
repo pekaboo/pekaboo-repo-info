@@ -243,6 +243,28 @@
 
     .empty-state { text-align: center; padding: 70px 20px; color: var(--text-muted); font-size: 1.05rem; grid-column: 1 / -1; }
 
+    /* Loading skeleton */
+    .skel-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 22px; height: 230px; }
+    .skel-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--card-hover-bg), var(--card-border), var(--card-hover-bg)); background-size: 200% 100%; animation: skel 1.4s ease-in-out infinite; margin-bottom: 12px; }
+    .skel-line.short { width: 45%; } .skel-line.mid { width: 70%; }
+    @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Commit heatmap */
+    .heatmap-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .heatmap { display: flex; gap: 2px; }
+    .hm-cell { width: 9px; height: 9px; border-radius: 2px; background: var(--card-hover-bg); transition: transform 0.1s; }
+    .hm-cell:hover { transform: scale(1.4); }
+    .hm-cell.lvl1 { background: rgba(139,92,246,0.25); }
+    .hm-cell.lvl2 { background: rgba(139,92,246,0.5); }
+    .hm-cell.lvl3 { background: rgba(139,92,246,0.78); }
+    .hm-cell.lvl4 { background: var(--accent); }
+    .hm-label { font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
+
+    /* Open-repo quick button */
+    .open-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; color: var(--text-muted); text-decoration: none; flex-shrink: 0; transition: all 0.15s; }
+    .open-btn:hover { color: var(--accent); background: var(--card-hover-bg); }
+    .open-btn svg { width: 15px; height: 15px; }
+
     footer { text-align: center; padding: 40px 20px; color: var(--text-muted); border-top: 1px solid var(--card-border); margin-top: 50px; font-size: 0.85rem; }
 
     .sidebar-toggle { display: none; }
@@ -373,7 +395,14 @@
     </aside>
 
     <main class="main-content">
-      <div class="repos-grid" id="reposGrid"></div>
+      <div class="repos-grid" id="reposGrid">
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+        <div class="skel-card"><div class="skel-line mid"></div><div class="skel-line"></div><div class="skel-line short"></div></div>
+      </div>
     </main>
 
   </div>
@@ -633,6 +662,17 @@
     const commitDate = repo.lastCommit ? timeAgo(repo.lastCommit.date) : '';
     const act = repo._activity;
     const repoUrl = escapeHtml(repo.url);
+    const weeks = Array.isArray(repo.commitWeeks) ? repo.commitWeeks : [];
+    const wMax = Math.max(1, ...weeks);
+    const heatmapHtml = weeks.length
+      ? '<div class="heatmap-row"><span class="hm-label">12w</span><div class="heatmap">' +
+        weeks.map(c => {
+          const lvl = c === 0 ? 0 : Math.max(1, Math.ceil((c / wMax) * 4));
+          return '<span class="hm-cell lvl' + lvl + '" title="' + c + ' commits that week"></span>';
+        }).join('') +
+        '</div></div>'
+      : '';
+    const openBtn = '<a class="open-btn" href="' + repoUrl + '" target="_blank" rel="noopener" title="Open repository" aria-label="Open ' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>';
     div.innerHTML =
       '<span class="activity-bar act-' + act + '" title="' + ACT_LABEL[act] + '"></span>' +
       '<div class="repo-header">' +
@@ -641,11 +681,13 @@
           (repo.isPrivate ? '<span class="badge private">Private</span>' : '') +
           (repo.isFork ? '<span class="badge fork">Fork</span>' : '') +
           (repo.isArchived ? '<span class="badge archived">Archived</span>' : '') +
+          openBtn +
         '</div>' +
       '</div>' +
       '<p class="repo-desc">' + desc + '</p>' +
       (tagsHtml ? '<div class="repo-meta-tags">' + tagsHtml + '</div>' : '') +
       '<div class="repo-lang"><span class="lang-dot" style="background-color:' + langColor + '"></span><span>' + langName + '</span></div>' +
+      heatmapHtml +
       '<div class="indicators">' +
         '<div class="indicator-item">' + ICO.star + '<span>' + (repo.stars || 0) + '</span></div>' +
         '<div class="indicator-item">' + ICO.fork + '<span>' + (repo.forks || 0) + '</span></div>' +
@@ -720,6 +762,49 @@
     } else {
       sorted.forEach(r => grid.appendChild(card(r)));
     }
+    syncToUrl();
+  }
+
+  // Persist filter state to the URL hash so refresh/share restores it
+  function syncToUrl() {
+    const p = new URLSearchParams();
+    if (searchFilter) p.set('q', searchFilter);
+    if (originFilter !== 'all') p.set('origin', originFilter);
+    if (activityFilter !== 'all') p.set('activity', activityFilter);
+    if (descFilter !== 'all') p.set('desc', descFilter);
+    if (timeFilter !== 'all') p.set('time', timeFilter);
+    if (visibilityFilter !== 'all') p.set('vis', visibilityFilter);
+    if (selectedLangs.size) p.set('lang', [...selectedLangs].join(','));
+    if (selectedTag) p.set('tag', selectedTag);
+    if (sortCriterion !== 'updated') p.set('sort', sortCriterion);
+    if (currentViewMode !== 'grid') p.set('view', currentViewMode);
+    const hash = p.toString();
+    history.replaceState(null, '', hash ? '#' + hash : location.pathname + location.search);
+  }
+  function loadFromUrl() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (params.has('q')) searchFilter = (params.get('q') || '').toLowerCase();
+    if (params.has('origin')) originFilter = params.get('origin');
+    if (params.has('activity')) activityFilter = params.get('activity');
+    if (params.has('desc')) descFilter = params.get('desc');
+    if (params.has('time')) timeFilter = params.get('time');
+    if (params.has('vis')) visibilityFilter = params.get('vis');
+    if (params.has('sort')) sortCriterion = params.get('sort');
+    if (params.has('view')) currentViewMode = params.get('view');
+    if (params.has('tag')) selectedTag = params.get('tag') || null;
+    if (params.has('lang')) {
+      selectedLangs.clear();
+      params.get('lang').split(',').filter(Boolean).forEach(l => selectedLangs.add(l));
+    }
+    document.getElementById('searchInput').value = searchFilter;
+    const gMap = { originFilter: originFilter, activityFilter: activityFilter, descFilter: descFilter, timeFilter: timeFilter, visibilityFilter: visibilityFilter };
+    Object.keys(gMap).forEach(g => setRadio(g, gMap[g]));
+    document.getElementById('sortSelect').value = sortCriterion;
+    document.querySelectorAll('#langList input').forEach(cb => cb.checked = selectedLangs.has(cb.value));
+    document.querySelectorAll('#tagsContainer .tag-bubble').forEach(b => {
+      b.classList.toggle('selected', !!selectedTag && b.textContent.startsWith(selectedTag + ' ('));
+    });
+    document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.view === currentViewMode));
   }
 
   // Charts — fixed-height wrapper prevents the resize-loop height growth bug
@@ -773,6 +858,7 @@
   }
 
   initCharts();
+  loadFromUrl();
   render();
 </script>
 </html>
