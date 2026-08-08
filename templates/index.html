@@ -288,12 +288,8 @@
       </div>
 
       <div class="filter-group">
-        <h4>Last Update</h4>
-        <div class="opt-list" id="timeFilter">
-          <label class="opt-row"><input type="radio" name="time" value="all" checked> All time</label>
-          <label class="opt-row"><input type="radio" name="time" value="recent"> Within 1 year <span class="opt-count" id="cntTimeRecent"></span></label>
-          <label class="opt-row"><input type="radio" name="time" value="older"> Over 1 year ago <span class="opt-count" id="cntTimeOlder"></span></label>
-        </div>
+        <h4>Last Update (by month)</h4>
+        <div class="opt-list" id="timeFilter"></div>
       </div>
 
       <div class="filter-group">
@@ -351,7 +347,6 @@
 <script>
   const REPO_DATA = __REPO_DATA__;
   const BUILD_TIME = '__BUILD_TIME__';
-  const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -388,13 +383,45 @@
   document.getElementById('statStars').textContent = REPO_DATA.reduce((a, r) => a + (r.stars || 0), 0);
   document.getElementById('statPrivate').textContent = REPO_DATA.filter(r => r.isPrivate).length;
 
-  // Filter counts for Source / Time
+  // Filter counts for Source
   document.getElementById('cntOriginAll').textContent = REPO_DATA.length;
   document.getElementById('cntOriginSource').textContent = REPO_DATA.filter(r => !r.isFork).length;
   document.getElementById('cntOriginFork').textContent = REPO_DATA.filter(r => r.isFork).length;
-  const nowMs = Date.now();
-  document.getElementById('cntTimeRecent').textContent = REPO_DATA.filter(r => r.updatedAt && (nowMs - new Date(r.updatedAt).getTime()) < ONE_YEAR_MS).length;
-  document.getElementById('cntTimeOlder').textContent = REPO_DATA.filter(r => !r.updatedAt || (nowMs - new Date(r.updatedAt).getTime()) >= ONE_YEAR_MS).length;
+
+  // Last Update filter: last 12 months as a month list + "over 1 year ago" bucket
+  const timeFilterEl = document.getElementById('timeFilter');
+  const _now = new Date();
+  const monthBuckets = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(_now.getFullYear(), _now.getMonth() - i, 1);
+    monthBuckets.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  const recentKeySet = new Set(monthBuckets);
+  const monthCount = {};
+  let olderCount = 0;
+  REPO_DATA.forEach(r => {
+    if (!r.updatedAt) { olderCount++; return; }
+    const u = new Date(r.updatedAt);
+    const k = u.getFullYear() + '-' + String(u.getMonth() + 1).padStart(2, '0');
+    if (recentKeySet.has(k)) monthCount[k] = (monthCount[k] || 0) + 1; else olderCount++;
+  });
+  function addTimeRadio(value, label, count) {
+    const lab = document.createElement('label');
+    lab.className = 'opt-row';
+    const inp = document.createElement('input');
+    inp.type = 'radio'; inp.name = 'time'; inp.value = value;
+    if (value === 'all') inp.checked = true;
+    lab.appendChild(inp);
+    const sp = document.createElement('span'); sp.textContent = label; lab.appendChild(sp);
+    if (count != null) { const c = document.createElement('span'); c.className = 'opt-count'; c.textContent = count; lab.appendChild(c); }
+    timeFilterEl.appendChild(lab);
+  }
+  addTimeRadio('all', 'All time');
+  monthBuckets.forEach(k => {
+    const d = new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, 1);
+    addTimeRadio(k, d.toLocaleString('en-US', { month: 'short', year: 'numeric' }), monthCount[k] || 0);
+  });
+  addTimeRadio('older', 'Over 1 year ago', olderCount);
 
   // Language list (multi-select checkboxes)
   const langColor = {};
@@ -554,10 +581,13 @@
       if (visibilityFilter === 'public' && r.isPrivate) return false;
       if (visibilityFilter === 'private' && !r.isPrivate) return false;
       if (timeFilter !== 'all') {
-        const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
-        const recent = (nowMs - updated) < ONE_YEAR_MS;
-        if (timeFilter === 'recent' && !recent) return false;
-        if (timeFilter === 'older' && recent) return false;
+        const u = r.updatedAt ? new Date(r.updatedAt) : null;
+        const k = u ? (u.getFullYear() + '-' + String(u.getMonth() + 1).padStart(2, '0')) : null;
+        if (timeFilter === 'older') {
+          if (k && recentKeySet.has(k)) return false;
+        } else {
+          if (k !== timeFilter) return false;
+        }
       }
       return true;
     });
