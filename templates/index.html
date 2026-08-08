@@ -302,7 +302,7 @@
 
   // Tags
   const tagCount = {};
-  REPO_DATA.flatMap(r => r.tags).forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
+  REPO_DATA.forEach(r => r.tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }));
   const topTags = Object.keys(tagCount).sort((a,b) => tagCount[b] - tagCount[a]).slice(0, 15);
   const tagsContainer = document.getElementById('tagsContainer');
   topTags.forEach(tag => {
@@ -336,6 +336,12 @@
     });
   });
 
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
   function timeAgo(d) {
     if (!d) return 'never';
     const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -354,19 +360,27 @@
 
   function card(repo) {
     const div = document.createElement('div'); div.className = 'repo-card';
+    const name = escapeHtml(repo.name);
+    const desc = repo.description ? escapeHtml(repo.description) : '<i>No description</i>';
+    const tagsHtml = repo.tags.map(t => '<span class="repo-tag">' + escapeHtml(t) + '</span>').join('');
+    const langName = repo.language ? escapeHtml(repo.language.name) : 'Unknown';
+    const langColor = repo.language ? escapeHtml(repo.language.color) : '#888';
+    const commitMsg = repo.lastCommit ? escapeHtml(repo.lastCommit.message) : '';
+    const commitAuthor = repo.lastCommit ? escapeHtml(repo.lastCommit.author) : '';
+    const commitDate = repo.lastCommit ? timeAgo(repo.lastCommit.date) : '';
     div.innerHTML = `
       <div class="repo-header">
-        <a href="${repo.url}" target="_blank" class="repo-title">${repo.name}</a>
+        <a href="${escapeHtml(repo.url)}" target="_blank" class="repo-title">${name}</a>
         <div class="badges">${repo.isPrivate?'<span class="badge private">Private</span>':''}${repo.isFork?'<span class="badge fork">Fork</span>':''}${repo.isArchived?'<span class="badge archived">Archived</span>':''}</div>
       </div>
-      <p class="repo-desc">${repo.description || '<i>No description</i>'}</p>
-      <div class="repo-meta-tags">${repo.tags.map(t => '<span class="repo-tag">'+t+'</span>').join('')}</div>
-      <div class="repo-lang">${repo.language ? '<span class="lang-dot" style="background-color:'+repo.language.color+'"></span><span>'+repo.language.name+'</span>' : '<span>Unknown</span>'}</div>
+      <p class="repo-desc">${desc}</p>
+      <div class="repo-meta-tags">${tagsHtml}</div>
+      <div class="repo-lang"><span class="lang-dot" style="background-color:${langColor}"></span><span>${langName}</span></div>
       <div class="indicators">
         <div class="indicator-item">⭐ ${repo.stars}</div><div class="indicator-item">🍴 ${repo.forks}</div>
         <div class="indicator-item">🐛 ${repo.issues}</div><div class="indicator-item">🔀 ${repo.pullRequests}</div>
       </div>
-      ${repo.lastCommit ? '<div class="repo-commit"><div class="repo-commit-msg" title="'+repo.lastCommit.message+'">'+repo.lastCommit.message+'</div><div style="font-size:0.75rem">By '+repo.lastCommit.author+' · '+timeAgo(repo.lastCommit.date)+'</div></div>' : '<div class="repo-commit" style="font-style:italic">No commit details</div>'}
+      ${repo.lastCommit ? '<div class="repo-commit"><div class="repo-commit-msg" title="'+commitMsg+'">'+commitMsg+'</div><div style="font-size:0.75rem">By '+commitAuthor+' · '+commitDate+'</div></div>' : '<div class="repo-commit" style="font-style:italic">No commit details</div>'}
     `;
     return div;
   }
@@ -390,8 +404,12 @@
 
     const sorted = sortRepos(filtered);
 
+    if (sorted.length === 0) {
+      grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:1.1rem">No repositories match your filters.</div>';
+      return;
+    }
+
     if (currentViewMode === 'grouped') {
-      const grp = {};
       sorted.forEach(r => { const l = r.language ? r.language.name : 'Unknown'; if (!grp[l]) grp[l] = []; grp[l].push(r); });
       Object.keys(grp).sort().forEach(l => {
         const h = document.createElement('div'); h.className = 'group-header'; h.textContent = l + ' (' + grp[l].length + ')'; grid.appendChild(h);
@@ -405,30 +423,39 @@
   let langChart, actChart;
   function recreateCharts() {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
+    if (typeof Chart === 'undefined') { console.warn('Chart.js not loaded — skipping charts'); return; }
     const ts = isDark ? '#9ca3af' : '#4b5563';
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
-    const lc = {};
-    REPO_DATA.forEach(r => { const n = r.language ? r.language.name : 'Unknown'; lc[n] = (lc[n]||0)+1; });
-    const top = Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if (!langChart) {
+      const lc = {};
+      REPO_DATA.forEach(r => { const n = r.language ? r.language.name : 'Unknown'; lc[n] = (lc[n]||0)+1; });
+      const top = Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      langChart = new Chart(document.getElementById('langChart').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: top.map(x=>x[0]), datasets: [{ data: top.map(x=>x[1]), backgroundColor: ['#6d28d9','#3b82f6','#10b981','#f59e0b','#ec4899','#374151','#6b7280','#9ca3af'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: ts } } } }
+      });
+    } else {
+      langChart.options.plugins.legend.labels.color = ts;
+      langChart.update();
+    }
 
-    if (langChart) langChart.destroy();
-    langChart = new Chart(document.getElementById('langChart').getContext('2d'), {
-      type: 'doughnut',
-      data: { labels: top.map(x=>x[0]), datasets: [{ data: top.map(x=>x[1]), backgroundColor: ['#6d28d9','#3b82f6','#10b981','#f59e0b','#ec4899','#374151','#6b7280','#9ca3af'], borderWidth: 0 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: ts } } } }
-    });
-
-    const mp = {};
-    REPO_DATA.forEach(r => { if (!r.pushedAt) return; const d = new Date(r.pushedAt); const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); mp[k]=(mp[k]||0)+1; });
-    const months = Object.keys(mp).sort().slice(-12);
-
-    if (actChart) actChart.destroy();
-    actChart = new Chart(document.getElementById('activityChart').getContext('2d'), {
-      type: 'bar',
-      data: { labels: months, datasets: [{ label: 'Repos Pushed', data: months.map(m=>mp[m]), backgroundColor: '#8b5cf6', borderRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: ts } }, y: { grid: { color: gridColor }, ticks: { color: ts } } }, plugins: { legend: { display: false } } }
-    });
+    if (!actChart) {
+      const mp = {};
+      REPO_DATA.forEach(r => { if (!r.pushedAt) return; const d = new Date(r.pushedAt); const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); mp[k]=(mp[k]||0)+1; });
+      const months = Object.keys(mp).sort().slice(-12);
+      actChart = new Chart(document.getElementById('activityChart').getContext('2d'), {
+        type: 'bar',
+        data: { labels: months, datasets: [{ label: 'Repos Pushed', data: months.map(m=>mp[m]), backgroundColor: '#8b5cf6', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: ts } }, y: { grid: { color: gridColor }, ticks: { color: ts } } }, plugins: { legend: { display: false } } }
+      });
+    } else {
+      actChart.options.scales.x.ticks.color = ts;
+      actChart.options.scales.y.ticks.color = ts;
+      actChart.options.scales.y.grid.color = gridColor;
+      actChart.update();
+    }
   }
 
   recreateCharts();

@@ -9,7 +9,5 @@
     "build:mock": "MOCK_MODE=true node scripts/build.js"
   },
   "dependencies": {},
-  "devDependencies": {
-    "undici": "^6.19.0"
-  }
+  "devDependencies": {}
 }
