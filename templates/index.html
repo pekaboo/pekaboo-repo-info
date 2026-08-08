@@ -200,6 +200,13 @@
       border-color: var(--accent);
       box-shadow: 0 12px 24px var(--accent-glow);
     }
+    .activity-bar { position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px; border-radius: 0 3px 3px 0; }
+    .act-active { background: #10b981; }
+    .act-stale { background: #f59e0b; }
+    .act-dormant { background: #f97316; }
+    .act-abandoned { background: #6b7280; }
+    .indicators a { text-decoration: none; color: inherit; transition: color 0.15s; }
+    .indicators a:hover { color: var(--accent); }
     .repo-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
     .repo-title { font-size: 1.15rem; font-weight: 700; text-decoration: none; color: var(--text); word-break: break-word; }
     .repo-title:hover { color: var(--accent); }
@@ -288,6 +295,26 @@
       </div>
 
       <div class="filter-group">
+        <h4>Activity</h4>
+        <div class="opt-list" id="activityFilter">
+          <label class="opt-row"><input type="radio" name="activity" value="all" checked> All <span class="opt-count" id="cntActAll"></span></label>
+          <label class="opt-row"><input type="radio" name="activity" value="active"> <span class="lang-dot act-active"></span> Active (≤30d) <span class="opt-count" id="cntActActive"></span></label>
+          <label class="opt-row"><input type="radio" name="activity" value="stale"> <span class="lang-dot act-stale"></span> Stale (≤6mo) <span class="opt-count" id="cntActStale"></span></label>
+          <label class="opt-row"><input type="radio" name="activity" value="dormant"> <span class="lang-dot act-dormant"></span> Dormant (≤1yr) <span class="opt-count" id="cntActDormant"></span></label>
+          <label class="opt-row"><input type="radio" name="activity" value="abandoned"> <span class="lang-dot act-abandoned"></span> Abandoned (1yr+) <span class="opt-count" id="cntActAbandoned"></span></label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Description</h4>
+        <div class="opt-list" id="descFilter">
+          <label class="opt-row"><input type="radio" name="desc" value="all" checked> All <span class="opt-count" id="cntDescAll"></span></label>
+          <label class="opt-row"><input type="radio" name="desc" value="has"> Has description <span class="opt-count" id="cntDescHas"></span></label>
+          <label class="opt-row"><input type="radio" name="desc" value="none"> No description <span class="opt-count" id="cntDescNone"></span></label>
+        </div>
+      </div>
+
+      <div class="filter-group">
         <h4>Last Update (by month)</h4>
         <div class="opt-list" id="timeFilter"></div>
       </div>
@@ -347,6 +374,20 @@
 <script>
   const REPO_DATA = __REPO_DATA__;
   const BUILD_TIME = '__BUILD_TIME__';
+  const NOW = Date.now();
+  const DAY_MS = 86400000;
+  const ACT_LABEL = { active: 'Active', stale: 'Stale', dormant: 'Dormant', abandoned: 'Abandoned' };
+  const ACT_COLOR = { active: '#10b981', stale: '#f59e0b', dormant: '#f97316', abandoned: '#6b7280' };
+
+  function activityOf(r) {
+    const p = r.pushedAt ? new Date(r.pushedAt).getTime() : 0;
+    const days = (NOW - p) / DAY_MS;
+    if (days <= 30) return 'active';
+    if (days <= 182) return 'stale';
+    if (days <= 365) return 'dormant';
+    return 'abandoned';
+  }
+  REPO_DATA.forEach(r => { r._activity = activityOf(r); });
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -480,11 +521,30 @@
   // Filter state
   let searchFilter = '';
   let originFilter = 'all', timeFilter = 'all', visibilityFilter = 'all';
+  let activityFilter = 'all', descFilter = 'all';
   let sortCriterion = 'updated', currentViewMode = 'grid';
+
+  // Activity + Description counts
+  const actCounts = { active: 0, stale: 0, dormant: 0, abandoned: 0 };
+  let descHas = 0;
+  REPO_DATA.forEach(r => {
+    actCounts[r._activity]++;
+    if (r.description && r.description.trim()) descHas++;
+  });
+  document.getElementById('cntActAll').textContent = REPO_DATA.length;
+  document.getElementById('cntActActive').textContent = actCounts.active;
+  document.getElementById('cntActStale').textContent = actCounts.stale;
+  document.getElementById('cntActDormant').textContent = actCounts.dormant;
+  document.getElementById('cntActAbandoned').textContent = actCounts.abandoned;
+  document.getElementById('cntDescAll').textContent = REPO_DATA.length;
+  document.getElementById('cntDescHas').textContent = descHas;
+  document.getElementById('cntDescNone').textContent = REPO_DATA.length - descHas;
 
   // Bind controls
   document.getElementById('searchInput').addEventListener('input', e => { searchFilter = e.target.value.toLowerCase(); render(); });
   document.getElementById('originFilter').addEventListener('change', e => { if (e.target.name === 'origin') { originFilter = e.target.value; render(); } });
+  document.getElementById('activityFilter').addEventListener('change', e => { if (e.target.name === 'activity') { activityFilter = e.target.value; render(); } });
+  document.getElementById('descFilter').addEventListener('change', e => { if (e.target.name === 'desc') { descFilter = e.target.value; render(); } });
   document.getElementById('timeFilter').addEventListener('change', e => { if (e.target.name === 'time') { timeFilter = e.target.value; render(); } });
   document.getElementById('visibilityFilter').addEventListener('change', e => { if (e.target.name === 'vis') { visibilityFilter = e.target.value; render(); } });
   document.getElementById('sortSelect').addEventListener('change', e => { sortCriterion = e.target.value; render(); });
@@ -500,10 +560,13 @@
 
   document.getElementById('clearBtn').addEventListener('click', () => {
     searchFilter = ''; originFilter = 'all'; timeFilter = 'all'; visibilityFilter = 'all';
+    activityFilter = 'all'; descFilter = 'all';
     sortCriterion = 'updated'; currentViewMode = 'grid'; selectedTag = null;
     selectedLangs.clear();
     document.getElementById('searchInput').value = '';
     document.querySelector('#originFilter input[value="all"]').checked = true;
+    document.querySelector('#activityFilter input[value="all"]').checked = true;
+    document.querySelector('#descFilter input[value="all"]').checked = true;
     document.querySelector('#timeFilter input[value="all"]').checked = true;
     document.querySelector('#visibilityFilter input[value="all"]').checked = true;
     document.getElementById('sortSelect').value = 'updated';
@@ -529,16 +592,19 @@
     const div = document.createElement('div');
     div.className = 'repo-card';
     const name = escapeHtml(repo.name);
-    const desc = repo.description ? escapeHtml(repo.description) : '<i style="opacity:0.6">No description</i>';
+    const desc = repo.description ? escapeHtml(repo.description) : '<i style="opacity:0.6">No description — add one on GitHub</i>';
     const tagsHtml = repo.tags.map(t => '<span class="repo-tag">' + escapeHtml(t) + '</span>').join('');
     const langName = repo.language ? escapeHtml(repo.language.name) : 'Unknown';
     const langColor = repo.language ? escapeHtml(repo.language.color) : '#888';
     const commitMsg = repo.lastCommit ? escapeHtml(repo.lastCommit.message) : '';
     const commitAuthor = repo.lastCommit ? escapeHtml(repo.lastCommit.author) : '';
     const commitDate = repo.lastCommit ? timeAgo(repo.lastCommit.date) : '';
+    const act = repo._activity;
+    const repoUrl = escapeHtml(repo.url);
     div.innerHTML =
+      '<span class="activity-bar act-' + act + '" title="' + ACT_LABEL[act] + '"></span>' +
       '<div class="repo-header">' +
-        '<a href="' + escapeHtml(repo.url) + '" target="_blank" rel="noopener" class="repo-title">' + name + '</a>' +
+        '<a href="' + repoUrl + '" target="_blank" rel="noopener" class="repo-title">' + name + '</a>' +
         '<div class="badges">' +
           (repo.isPrivate ? '<span class="badge private">Private</span>' : '') +
           (repo.isFork ? '<span class="badge fork">Fork</span>' : '') +
@@ -551,11 +617,12 @@
       '<div class="indicators">' +
         '<div class="indicator-item">⭐ ' + (repo.stars || 0) + '</div>' +
         '<div class="indicator-item">🍴 ' + (repo.forks || 0) + '</div>' +
-        '<div class="indicator-item">🐛 ' + (repo.issues || 0) + '</div>' +
-        '<div class="indicator-item">🔀 ' + (repo.pullRequests || 0) + '</div>' +
+        '<a class="indicator-item" href="' + repoUrl + '/issues" target="_blank" rel="noopener" title="Open issues">🐛 ' + (repo.issues || 0) + '</a>' +
+        '<a class="indicator-item" href="' + repoUrl + '/pulls" target="_blank" rel="noopener" title="Open pull requests">🔀 ' + (repo.pullRequests || 0) + '</a>' +
       '</div>' +
       '<div class="repo-times">' +
-        '<span>Created ' + timeAgo(repo.createdAt) + '</span>' +
+        '<span style="color:' + ACT_COLOR[act] + ';font-weight:600">● ' + ACT_LABEL[act] + '</span>' +
+        '<span>· Created ' + timeAgo(repo.createdAt) + '</span>' +
         '<span>· Updated ' + timeAgo(repo.updatedAt) + '</span>' +
       '</div>' +
       (repo.lastCommit
@@ -580,6 +647,9 @@
       if (originFilter === 'fork' && !r.isFork) return false;
       if (visibilityFilter === 'public' && r.isPrivate) return false;
       if (visibilityFilter === 'private' && !r.isPrivate) return false;
+      if (activityFilter !== 'all' && r._activity !== activityFilter) return false;
+      if (descFilter === 'has' && !(r.description && r.description.trim())) return false;
+      if (descFilter === 'none' && (r.description && r.description.trim())) return false;
       if (timeFilter !== 'all') {
         const u = r.updatedAt ? new Date(r.updatedAt) : null;
         const k = u ? (u.getFullYear() + '-' + String(u.getMonth() + 1).padStart(2, '0')) : null;
