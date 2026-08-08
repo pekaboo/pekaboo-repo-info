@@ -90,6 +90,17 @@
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
     .stat-card .lbl { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card.clickable { cursor: pointer; }
+    .stat-card.clickable:hover .val { filter: brightness(1.18); }
+    .stat-card .val, .indicator-item span, .opt-count { font-variant-numeric: tabular-nums; }
+    .ico { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.8; }
+    a:focus-visible, button:focus-visible, .tag-bubble:focus-visible, .select-dropdown:focus-visible, .search-input:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      .repo-card:hover, .stat-card:hover { transform: none !important; }
+    }
 
     .charts-container {
       display: grid;
@@ -259,11 +270,11 @@
 <div class="container">
 
   <div class="dashboard-stats">
-    <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">Total Repos</div></div>
-    <div class="stat-card"><div class="val" id="statSource">0</div><div class="lbl">Own Source</div></div>
-    <div class="stat-card"><div class="val" id="statForks">0</div><div class="lbl">Forks</div></div>
+    <div class="stat-card clickable" data-stat="total" title="Click to reset all filters"><div class="val" id="statTotal">0</div><div class="lbl">Total Repos</div></div>
+    <div class="stat-card clickable" data-stat="source" title="Filter: own source repos"><div class="val" id="statSource">0</div><div class="lbl">Own Source</div></div>
+    <div class="stat-card clickable" data-stat="fork" title="Filter: forks"><div class="val" id="statForks">0</div><div class="lbl">Forks</div></div>
     <div class="stat-card"><div class="val" id="statStars">0</div><div class="lbl">Total Stars</div></div>
-    <div class="stat-card"><div class="val" id="statPrivate">0</div><div class="lbl">Private</div></div>
+    <div class="stat-card clickable" data-stat="private" title="Filter: private repos"><div class="val" id="statPrivate">0</div><div class="lbl">Private</div></div>
   </div>
 
   <div class="charts-container">
@@ -394,6 +405,13 @@
     div.appendChild(document.createTextNode(str == null ? '' : String(str)));
     return div.innerHTML;
   }
+  // Inline SVG icons (Lucide-style) — replace emoji for a professional data look
+  const ICO = {
+    star: '<svg class="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+    fork: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v2a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-2"/><path d="M12 13.5V18"/></svg>',
+    issue: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>',
+    pr: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7"/><path d="M18 8.5c0 3-3 4-6 4"/></svg>'
+  };
   function timeAgo(d) {
     if (!d) return 'never';
     const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -558,23 +576,37 @@
     });
   });
 
-  document.getElementById('clearBtn').addEventListener('click', () => {
+  function setRadio(groupId, value) {
+    const el = document.querySelector('#' + groupId + ' input[value="' + value + '"]');
+    if (el) el.checked = true;
+  }
+  function resetFilters() {
     searchFilter = ''; originFilter = 'all'; timeFilter = 'all'; visibilityFilter = 'all';
     activityFilter = 'all'; descFilter = 'all';
     sortCriterion = 'updated'; currentViewMode = 'grid'; selectedTag = null;
     selectedLangs.clear();
     document.getElementById('searchInput').value = '';
-    document.querySelector('#originFilter input[value="all"]').checked = true;
-    document.querySelector('#activityFilter input[value="all"]').checked = true;
-    document.querySelector('#descFilter input[value="all"]').checked = true;
-    document.querySelector('#timeFilter input[value="all"]').checked = true;
-    document.querySelector('#visibilityFilter input[value="all"]').checked = true;
+    ['originFilter', 'activityFilter', 'descFilter', 'timeFilter', 'visibilityFilter'].forEach(g => setRadio(g, 'all'));
     document.getElementById('sortSelect').value = 'updated';
     document.querySelectorAll('#langList input').forEach(cb => cb.checked = false);
     document.querySelectorAll('#tagsContainer .tag-bubble').forEach(b => b.classList.remove('selected'));
     document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.view-toggle .btn[data-view="grid"]').classList.add('active');
     render();
+  }
+  document.getElementById('clearBtn').addEventListener('click', resetFilters);
+
+  // Stat cards act as quick-filter shortcuts
+  document.querySelectorAll('.stat-card.clickable').forEach(card => {
+    card.addEventListener('click', () => {
+      const s = card.dataset.stat;
+      if (s === 'total') { resetFilters(); return; }
+      if (s === 'source') { originFilter = 'source'; setRadio('originFilter', 'source'); }
+      else if (s === 'fork') { originFilter = 'fork'; setRadio('originFilter', 'fork'); }
+      else if (s === 'private') { visibilityFilter = 'private'; setRadio('visibilityFilter', 'private'); }
+      render();
+      document.getElementById('reposGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   });
 
   function sortRepos(repos) {
@@ -615,10 +647,10 @@
       (tagsHtml ? '<div class="repo-meta-tags">' + tagsHtml + '</div>' : '') +
       '<div class="repo-lang"><span class="lang-dot" style="background-color:' + langColor + '"></span><span>' + langName + '</span></div>' +
       '<div class="indicators">' +
-        '<div class="indicator-item">⭐ ' + (repo.stars || 0) + '</div>' +
-        '<div class="indicator-item">🍴 ' + (repo.forks || 0) + '</div>' +
-        '<a class="indicator-item" href="' + repoUrl + '/issues" target="_blank" rel="noopener" title="Open issues">🐛 ' + (repo.issues || 0) + '</a>' +
-        '<a class="indicator-item" href="' + repoUrl + '/pulls" target="_blank" rel="noopener" title="Open pull requests">🔀 ' + (repo.pullRequests || 0) + '</a>' +
+        '<div class="indicator-item">' + ICO.star + '<span>' + (repo.stars || 0) + '</span></div>' +
+        '<div class="indicator-item">' + ICO.fork + '<span>' + (repo.forks || 0) + '</span></div>' +
+        '<a class="indicator-item" href="' + repoUrl + '/issues" target="_blank" rel="noopener" title="Open issues">' + ICO.issue + '<span>' + (repo.issues || 0) + '</span></a>' +
+        '<a class="indicator-item" href="' + repoUrl + '/pulls" target="_blank" rel="noopener" title="Open pull requests">' + ICO.pr + '<span>' + (repo.pullRequests || 0) + '</span></a>' +
       '</div>' +
       '<div class="repo-times">' +
         '<span style="color:' + ACT_COLOR[act] + ';font-weight:600">● ' + ACT_LABEL[act] + '</span>' +
