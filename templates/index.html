@@ -3,39 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My GitHub Repositories</title>
+  <title>Repo Insight Center</title>
   <script>__CHART_JS_INLINE__</script>
   <style>
     :root {
       --bg: #0b0b14;
+      --bg-soft: #12121f;
       --card-bg: rgba(255, 255, 255, 0.04);
       --card-border: rgba(255, 255, 255, 0.08);
       --card-shadow: rgba(0, 0, 0, 0.3);
       --accent: #8b5cf6;
+      --accent-2: #6366f1;
       --accent-glow: rgba(139, 92, 246, 0.35);
       --text: #f3f4f6;
       --text-muted: #9ca3af;
       --badge-private: #f59e0b;
       --badge-fork: #3b82f6;
       --badge-archive: #ef4444;
-      --header-bg: rgba(11, 11, 20, 0.7);
+      --header-bg: rgba(11, 11, 20, 0.72);
       --card-hover-bg: rgba(255, 255, 255, 0.08);
+      --input-bg: rgba(0, 0, 0, 0.25);
     }
     [data-theme="light"] {
-      --bg: #f9fafb;
+      --bg: #f6f7fb;
+      --bg-soft: #eef0f6;
       --card-bg: #ffffff;
       --card-border: rgba(0, 0, 0, 0.08);
-      --card-shadow: rgba(0, 0, 0, 0.05);
-      --accent: #6d28d9;
-      --accent-glow: rgba(109, 40, 217, 0.15);
+      --card-shadow: rgba(0, 0, 0, 0.06);
+      --accent: #7c3aed;
+      --accent-2: #6366f1;
+      --accent-glow: rgba(124, 58, 237, 0.18);
       --text: #111827;
       --text-muted: #4b5563;
-      --header-bg: rgba(249, 250, 251, 0.8);
+      --header-bg: rgba(246, 247, 251, 0.82);
       --card-hover-bg: #f3f4f6;
+      --input-bg: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: var(--bg);
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(139,92,246,0.10), transparent 60%), var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       transition: background-color 0.3s, color 0.3s;
@@ -43,119 +49,140 @@
       padding-top: 80px;
     }
     header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
+      position: fixed; top: 0; left: 0; right: 0;
       height: 70px;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
       background-color: var(--header-bg);
       border-bottom: 1px solid var(--card-border);
       z-index: 100;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex; justify-content: space-between; align-items: center;
       padding: 0 40px;
     }
     .nav-title { font-weight: 700; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; }
-    .theme-toggle {
-      background: none;
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .result-count { font-size: 0.85rem; color: var(--text-muted); }
+    .btn {
+      background: none; border: 1px solid var(--card-border); color: var(--text);
+      padding: 8px 16px; border-radius: 9px; cursor: pointer; font-size: 0.9rem;
       transition: all 0.2s;
     }
-    .theme-toggle:hover { background-color: var(--card-hover-bg); border-color: var(--accent); }
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .btn:hover { background-color: var(--card-hover-bg); border-color: var(--accent); }
+
+    .container { max-width: 1500px; margin: 0 auto; padding: 20px; }
 
     .dashboard-stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 18px; margin-bottom: 26px;
     }
     .stat-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
+      border-radius: 14px;
+      padding: 18px 20px;
       box-shadow: 0 4px 6px var(--card-shadow);
+      transition: transform 0.2s, border-color 0.2s;
     }
-    .stat-card .val { font-size: 2.2rem; font-weight: 800; color: var(--accent); margin-bottom: 5px; }
-    .stat-card .lbl { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .stat-card .val {
+      font-size: 2rem; font-weight: 800; margin-bottom: 4px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-card .lbl { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .charts-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-      gap: 25px;
-      margin-bottom: 30px;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 22px; margin-bottom: 26px;
     }
     .chart-box {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 24px;
+      padding: 20px 22px;
       box-shadow: 0 4px 6px var(--card-shadow);
-      min-height: 380px;
+      height: 340px;
+      display: flex; flex-direction: column;
     }
-    .chart-box h3 { margin-bottom: 20px; font-size: 1.1rem; color: var(--text-muted); }
+    .chart-box h3 { margin-bottom: 14px; font-size: 1rem; color: var(--text-muted); flex-shrink: 0; }
+    .chart-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
 
-    .controls-wrapper {
+    /* Layout: sidebar + main */
+    .app-layout { display: flex; gap: 22px; align-items: flex-start; }
+    .sidebar {
+      width: 270px; flex-shrink: 0;
+      position: sticky; top: 90px;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 30px;
+      padding: 18px;
       box-shadow: 0 4px 6px var(--card-shadow);
+      max-height: calc(100vh - 110px);
+      overflow-y: auto;
     }
-    .control-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      align-items: center;
-      margin-bottom: 15px;
+    .main-content { flex: 1 1 auto; min-width: 0; }
+
+    .filter-group { margin-bottom: 20px; }
+    .filter-group:last-child { margin-bottom: 0; }
+    .filter-group h4 {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 10px; font-weight: 700;
     }
-    .control-row:last-child { margin-bottom: 0; }
     .search-input {
-      flex: 1;
-      min-width: 250px;
-      background: var(--bg);
+      width: 100%;
+      background: var(--input-bg);
       border: 1px solid var(--card-border);
       color: var(--text);
-      padding: 10px 16px;
-      border-radius: 8px;
-      outline: none;
+      padding: 10px 14px; border-radius: 9px; outline: none; font-size: 0.9rem;
     }
-    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-    .select-dropdown, .control-btn {
-      background: var(--bg);
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    .opt-list { display: flex; flex-direction: column; gap: 6px; }
+    .opt-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 8px; cursor: pointer;
+      font-size: 0.88rem; color: var(--text);
+      transition: background 0.15s;
+    }
+    .opt-row:hover { background: var(--card-hover-bg); }
+    .opt-row input { accent-color: var(--accent); cursor: pointer; }
+    .opt-row .opt-count { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); }
+    .opt-row .lang-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .select-dropdown {
+      width: 100%;
+      background: var(--input-bg);
       border: 1px solid var(--card-border);
       color: var(--text);
-      padding: 10px 16px;
-      border-radius: 8px;
-      outline: none;
-      cursor: pointer;
+      padding: 9px 12px; border-radius: 9px; outline: none; cursor: pointer; font-size: 0.88rem;
     }
-    .control-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .tag-bubble {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      cursor: pointer;
+
+    .view-toggle { display: flex; gap: 6px; }
+    .view-toggle .btn { flex: 1; padding: 8px 6px; font-size: 0.8rem; text-align: center; }
+    .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .clear-btn {
+      width: 100%; margin-top: 4px;
+      background: none; border: 1px dashed var(--card-border); color: var(--text-muted);
+      padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.82rem;
       transition: all 0.2s;
+    }
+    .clear-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-bubble {
+      background: var(--card-hover-bg); border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 4px 10px; border-radius: 20px; font-size: 0.76rem;
+      cursor: pointer; transition: all 0.15s;
     }
     .tag-bubble:hover, .tag-bubble.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     .repos-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 25px;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
     }
     .repos-grid.list-view { grid-template-columns: 1fr; }
 
@@ -163,53 +190,48 @@
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 24px;
+      padding: 22px;
       box-shadow: 0 4px 6px var(--card-shadow);
       transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      position: relative;
+      display: flex; flex-direction: column; height: 100%; position: relative;
     }
     .repo-card:hover {
       transform: translateY(-4px);
       border-color: var(--accent);
-      box-shadow: 0 10px 20px var(--accent-glow);
+      box-shadow: 0 12px 24px var(--accent-glow);
     }
-    .repo-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-      gap: 10px;
-    }
-    .repo-title { font-size: 1.25rem; font-weight: 700; text-decoration: none; color: var(--text); }
+    .repo-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+    .repo-title { font-size: 1.15rem; font-weight: 700; text-decoration: none; color: var(--text); word-break: break-word; }
     .repo-title:hover { color: var(--accent); }
-    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
-    .badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 600; color: #fff; text-transform: uppercase; }
+    .badges { display: flex; gap: 5px; flex-wrap: wrap; flex-shrink: 0; }
+    .badge { font-size: 0.66rem; padding: 3px 7px; border-radius: 4px; font-weight: 600; color: #fff; text-transform: uppercase; letter-spacing: 0.03em; }
     .badge.private { background-color: var(--badge-private); }
     .badge.fork { background-color: var(--badge-fork); }
     .badge.archived { background-color: var(--badge-archive); }
-    .repo-desc { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 16px; flex-grow: 1; }
-    .indicators { display: flex; gap: 15px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; }
+    .repo-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 14px; flex-grow: 1; }
+    .repo-meta-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .repo-tag { background: var(--card-hover-bg); color: var(--accent); font-size: 0.72rem; border-radius: 4px; padding: 2px 7px; }
+    .repo-lang { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; margin-bottom: 12px; }
+    .repo-lang .lang-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .indicators { display: flex; gap: 14px; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px; flex-wrap: wrap; }
     .indicator-item { display: flex; align-items: center; gap: 4px; }
-    .repo-lang { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; }
-    .lang-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .repo-commit { border-top: 1px solid var(--card-border); padding-top: 12px; font-size: 0.8rem; color: var(--text-muted); }
-    .repo-commit-msg { font-style: italic; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .repo-meta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .repo-tag { background: var(--card-hover-bg); color: var(--accent); font-size: 0.75rem; border-radius: 4px; padding: 2px 6px; }
+    .repo-times { display: flex; gap: 12px; font-size: 0.74rem; color: var(--text-muted); margin-bottom: 12px; flex-wrap: wrap; }
+    .repo-commit { border-top: 1px solid var(--card-border); padding-top: 10px; font-size: 0.78rem; color: var(--text-muted); }
+    .repo-commit-msg { font-style: italic; color: var(--text); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .group-header {
-      grid-column: 1 / -1;
-      margin-top: 30px;
-      margin-bottom: 15px;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 8px;
-      font-size: 1.5rem;
+      grid-column: 1 / -1; margin-top: 24px; margin-bottom: 12px;
+      border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 1.25rem; font-weight: 700;
     }
-    footer { text-align: center; padding: 40px; color: var(--text-muted); border-top: 1px solid var(--card-border); margin-top: 60px; }
-    @media (max-width: 900px) {
+
+    .empty-state { text-align: center; padding: 70px 20px; color: var(--text-muted); font-size: 1.05rem; grid-column: 1 / -1; }
+
+    footer { text-align: center; padding: 40px 20px; color: var(--text-muted); border-top: 1px solid var(--card-border); margin-top: 50px; font-size: 0.85rem; }
+
+    .sidebar-toggle { display: none; }
+    @media (max-width: 1024px) {
       .charts-container { grid-template-columns: 1fr; }
+      .app-layout { flex-direction: column; }
+      .sidebar { width: 100%; position: static; max-height: none; }
       header { padding: 0 20px; }
     }
   </style>
@@ -221,167 +243,297 @@
     <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
     <span>Repo Insight Center</span>
   </div>
-  <button class="theme-toggle" id="themeBtn">Switch Light Mode</button>
+  <div class="header-actions">
+    <span class="result-count" id="resultCount"></span>
+    <button class="btn" id="themeBtn">☀ Light</button>
+  </div>
 </header>
 
 <div class="container">
 
-  <div class="dashboard-stats" id="statsGrid">
-    <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">Total Repositories</div></div>
-    <div class="stat-card"><div class="val" id="statStars">0</div><div class="lbl">Global Stars</div></div>
-    <div class="stat-card"><div class="val" id="statForks">0</div><div class="lbl">Global Forks</div></div>
-    <div class="stat-card"><div class="val" id="statPrivate">0</div><div class="lbl">Private Projects</div></div>
+  <div class="dashboard-stats">
+    <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">Total Repos</div></div>
+    <div class="stat-card"><div class="val" id="statSource">0</div><div class="lbl">Own Source</div></div>
+    <div class="stat-card"><div class="val" id="statForks">0</div><div class="lbl">Forks</div></div>
+    <div class="stat-card"><div class="val" id="statStars">0</div><div class="lbl">Total Stars</div></div>
+    <div class="stat-card"><div class="val" id="statPrivate">0</div><div class="lbl">Private</div></div>
   </div>
 
   <div class="charts-container">
-    <div class="chart-box"><h3>Primary Language Distribution</h3><canvas id="langChart"></canvas></div>
-    <div class="chart-box"><h3>Push Activity Distribution (Monthly)</h3><canvas id="activityChart"></canvas></div>
+    <div class="chart-box">
+      <h3>Primary Language Distribution</h3>
+      <div class="chart-wrap"><canvas id="langChart"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Push Activity (Monthly)</h3>
+      <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+    </div>
   </div>
 
-  <div class="controls-wrapper">
-    <div class="control-row">
-      <input type="text" class="search-input" id="searchInput" placeholder="Search by name, description, tags...">
-      <select class="select-dropdown" id="langSelect"><option value="ALL">All Languages</option></select>
-      <select class="select-dropdown" id="sortSelect">
-        <option value="pushed">Recently Pushed</option>
-        <option value="stars">Stars Count</option>
-        <option value="forks">Forks Count</option>
-        <option value="created">Created Date</option>
-      </select>
-    </div>
-    <div class="control-row">
-      <button class="control-btn active" id="btnAllType">All</button>
-      <button class="control-btn" id="btnSourceType">Source Only</button>
-      <button class="control-btn" id="btnForkType">Forks Only</button>
-      <button class="control-btn" id="btnPrivateType">Private Only</button>
-      <button class="control-btn" id="btnPublicType">Public Only</button>
-      <div style="flex-grow:1"></div>
-      <button class="control-btn active" id="btnViewGrid">Grid Layout</button>
-      <button class="control-btn" id="btnViewList">List Layout</button>
-      <button class="control-btn" id="btnViewGrouped">Grouped Language</button>
-    </div>
-    <div class="tags-container" id="tagsContainer"></div>
-  </div>
+  <div class="app-layout">
 
-  <div class="repos-grid" id="reposGrid"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="filter-group">
+        <h4>Search</h4>
+        <input type="text" class="search-input" id="searchInput" placeholder="Name, description, tags...">
+      </div>
+
+      <div class="filter-group">
+        <h4>Source</h4>
+        <div class="opt-list" id="originFilter">
+          <label class="opt-row"><input type="radio" name="origin" value="all" checked> All <span class="opt-count" id="cntOriginAll"></span></label>
+          <label class="opt-row"><input type="radio" name="origin" value="source"> Own (created) <span class="opt-count" id="cntOriginSource"></span></label>
+          <label class="opt-row"><input type="radio" name="origin" value="fork"> Forks <span class="opt-count" id="cntOriginFork"></span></label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Last Update</h4>
+        <div class="opt-list" id="timeFilter">
+          <label class="opt-row"><input type="radio" name="time" value="all" checked> All time</label>
+          <label class="opt-row"><input type="radio" name="time" value="recent"> Within 1 year <span class="opt-count" id="cntTimeRecent"></span></label>
+          <label class="opt-row"><input type="radio" name="time" value="older"> Over 1 year ago <span class="opt-count" id="cntTimeOlder"></span></label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Visibility</h4>
+        <div class="opt-list" id="visibilityFilter">
+          <label class="opt-row"><input type="radio" name="vis" value="all" checked> All</label>
+          <label class="opt-row"><input type="radio" name="vis" value="public"> Public</label>
+          <label class="opt-row"><input type="radio" name="vis" value="private"> Private</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Language</h4>
+        <div class="opt-list" id="langList"></div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Tags</h4>
+        <div class="tag-cloud" id="tagsContainer"></div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Sort By</h4>
+        <select class="select-dropdown" id="sortSelect">
+          <option value="updated">Update time (newest)</option>
+          <option value="created">Created time (newest)</option>
+          <option value="name">Name (A → Z)</option>
+          <option value="stars">Stars (most)</option>
+          <option value="forks">Forks (most)</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <h4>View</h4>
+        <div class="view-toggle">
+          <button class="btn active" data-view="grid">Grid</button>
+          <button class="btn" data-view="list">List</button>
+          <button class="btn" data-view="grouped">Grouped</button>
+        </div>
+      </div>
+
+      <button class="clear-btn" id="clearBtn">↺ Reset all filters</button>
+    </aside>
+
+    <main class="main-content">
+      <div class="repos-grid" id="reposGrid"></div>
+    </main>
+
+  </div>
 
 </div>
 
-<footer><p>Auto-generated by nightly build | <span id="buildTimestamp"></span></p></footer>
+<footer><p>Auto-generated by GitHub Action · Updated <span id="buildTimestamp"></span> · <span id="footTotal"></span> repos</p></footer>
 
 <script>
   const REPO_DATA = __REPO_DATA__;
   const BUILD_TIME = '__BUILD_TIME__';
+  const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
-  // Theme toggle
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str == null ? '' : String(str)));
+    return div.innerHTML;
+  }
+  function timeAgo(d) {
+    if (!d) return 'never';
+    const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+    if (diff < 0) return 'just now';
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'yesterday';
+    if (diff < 30) return diff + ' days ago';
+    if (diff < 365) return Math.floor(diff / 30) + ' months ago';
+    return Math.floor(diff / 365) + ' years ago';
+  }
+
+  // Theme
   const themeBtn = document.getElementById('themeBtn');
   themeBtn.addEventListener('click', () => {
     const cur = document.body.getAttribute('data-theme');
     const next = cur === 'dark' ? 'light' : 'dark';
     document.body.setAttribute('data-theme', next);
-    themeBtn.textContent = next === 'dark' ? 'Switch Light Mode' : 'Switch Dark Mode';
-    recreateCharts();
+    themeBtn.textContent = next === 'dark' ? '☀ Light' : '☾ Dark';
+    updateChartsTheme();
   });
-
   document.getElementById('buildTimestamp').textContent = new Date(BUILD_TIME).toLocaleString();
+  document.getElementById('footTotal').textContent = REPO_DATA.length;
 
   // Stats
   document.getElementById('statTotal').textContent = REPO_DATA.length;
-  document.getElementById('statStars').textContent = REPO_DATA.reduce((a,r) => a + r.stars, 0);
-  document.getElementById('statForks').textContent = REPO_DATA.reduce((a,r) => a + r.forks, 0);
+  document.getElementById('statSource').textContent = REPO_DATA.filter(r => !r.isFork).length;
+  document.getElementById('statForks').textContent = REPO_DATA.filter(r => r.isFork).length;
+  document.getElementById('statStars').textContent = REPO_DATA.reduce((a, r) => a + (r.stars || 0), 0);
   document.getElementById('statPrivate').textContent = REPO_DATA.filter(r => r.isPrivate).length;
 
-  // Filters state
-  let searchFilter = '', selectedLang = 'ALL', sortCriterion = 'pushed';
-  let relativeFilter = 'all', currentViewMode = 'grid', selectedTag = null;
+  // Filter counts for Source / Time
+  document.getElementById('cntOriginAll').textContent = REPO_DATA.length;
+  document.getElementById('cntOriginSource').textContent = REPO_DATA.filter(r => !r.isFork).length;
+  document.getElementById('cntOriginFork').textContent = REPO_DATA.filter(r => r.isFork).length;
+  const nowMs = Date.now();
+  document.getElementById('cntTimeRecent').textContent = REPO_DATA.filter(r => r.updatedAt && (nowMs - new Date(r.updatedAt).getTime()) < ONE_YEAR_MS).length;
+  document.getElementById('cntTimeOlder').textContent = REPO_DATA.filter(r => !r.updatedAt || (nowMs - new Date(r.updatedAt).getTime()) >= ONE_YEAR_MS).length;
 
-  // Language dropdown
-  const langs = [...new Set(REPO_DATA.map(r => r.language ? r.language.name : null).filter(Boolean))].sort();
-  const langSelect = document.getElementById('langSelect');
-  langs.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; langSelect.appendChild(o); });
+  // Language list (multi-select checkboxes)
+  const langColor = {};
+  const langCount = {};
+  REPO_DATA.forEach(r => {
+    if (!r.language) return;
+    langColor[r.language.name] = r.language.color || '#888';
+    langCount[r.language.name] = (langCount[r.language.name] || 0) + 1;
+  });
+  const langs = Object.keys(langCount).sort((a, b) => langCount[b] - langCount[a]);
+  const langListEl = document.getElementById('langList');
+  const selectedLangs = new Set();
+  langs.forEach(l => {
+    const label = document.createElement('label');
+    label.className = 'opt-row';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = l;
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedLangs.add(l); else selectedLangs.delete(l);
+      render();
+    });
+    label.appendChild(cb);
+    const dot = document.createElement('span');
+    dot.className = 'lang-dot'; dot.style.backgroundColor = langColor[l];
+    label.appendChild(dot);
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = l;
+    label.appendChild(nameSpan);
+    const cnt = document.createElement('span');
+    cnt.className = 'opt-count'; cnt.textContent = langCount[l];
+    label.appendChild(cnt);
+    langListEl.appendChild(label);
+  });
 
   // Tags
   const tagCount = {};
   REPO_DATA.forEach(r => r.tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }));
-  const topTags = Object.keys(tagCount).sort((a,b) => tagCount[b] - tagCount[a]).slice(0, 15);
+  const topTags = Object.keys(tagCount).sort((a, b) => tagCount[b] - tagCount[a]).slice(0, 18);
   const tagsContainer = document.getElementById('tagsContainer');
+  let selectedTag = null;
   topTags.forEach(tag => {
-    const b = document.createElement('span'); b.className = 'tag-bubble';
+    const b = document.createElement('span');
+    b.className = 'tag-bubble';
     b.textContent = tag + ' (' + tagCount[tag] + ')';
     b.addEventListener('click', () => {
       if (selectedTag === tag) { selectedTag = null; b.classList.remove('selected'); }
-      else { document.querySelectorAll('.tag-bubble').forEach(x => x.classList.remove('selected')); selectedTag = tag; b.classList.add('selected'); }
+      else {
+        document.querySelectorAll('#tagsContainer .tag-bubble').forEach(x => x.classList.remove('selected'));
+        selectedTag = tag; b.classList.add('selected');
+      }
       render();
     });
     tagsContainer.appendChild(b);
   });
 
+  // Filter state
+  let searchFilter = '';
+  let originFilter = 'all', timeFilter = 'all', visibilityFilter = 'all';
+  let sortCriterion = 'updated', currentViewMode = 'grid';
+
+  // Bind controls
   document.getElementById('searchInput').addEventListener('input', e => { searchFilter = e.target.value.toLowerCase(); render(); });
-  langSelect.addEventListener('change', e => { selectedLang = e.target.value; render(); });
+  document.getElementById('originFilter').addEventListener('change', e => { if (e.target.name === 'origin') { originFilter = e.target.value; render(); } });
+  document.getElementById('timeFilter').addEventListener('change', e => { if (e.target.name === 'time') { timeFilter = e.target.value; render(); } });
+  document.getElementById('visibilityFilter').addEventListener('change', e => { if (e.target.name === 'vis') { visibilityFilter = e.target.value; render(); } });
   document.getElementById('sortSelect').addEventListener('change', e => { sortCriterion = e.target.value; render(); });
 
-  [{id:'btnAllType',v:'all'},{id:'btnSourceType',v:'source'},{id:'btnForkType',v:'fork'},{id:'btnPrivateType',v:'private'},{id:'btnPublicType',v:'public'}].forEach(x => {
-    document.getElementById(x.id).addEventListener('click', () => {
-      ['btnAllType','btnSourceType','btnForkType','btnPrivateType','btnPublicType'].forEach(i => document.getElementById(i).classList.remove('active'));
-      document.getElementById(x.id).classList.add('active');
-      relativeFilter = x.v; render();
+  document.querySelectorAll('.view-toggle .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentViewMode = btn.dataset.view;
+      render();
     });
   });
 
-  [{id:'btnViewGrid',m:'grid'},{id:'btnViewList',m:'list'},{id:'btnViewGrouped',m:'grouped'}].forEach(x => {
-    document.getElementById(x.id).addEventListener('click', () => {
-      ['btnViewGrid','btnViewList','btnViewGrouped'].forEach(i => document.getElementById(i).classList.remove('active'));
-      document.getElementById(x.id).classList.add('active');
-      currentViewMode = x.m; render();
-    });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    searchFilter = ''; originFilter = 'all'; timeFilter = 'all'; visibilityFilter = 'all';
+    sortCriterion = 'updated'; currentViewMode = 'grid'; selectedTag = null;
+    selectedLangs.clear();
+    document.getElementById('searchInput').value = '';
+    document.querySelector('#originFilter input[value="all"]').checked = true;
+    document.querySelector('#timeFilter input[value="all"]').checked = true;
+    document.querySelector('#visibilityFilter input[value="all"]').checked = true;
+    document.getElementById('sortSelect').value = 'updated';
+    document.querySelectorAll('#langList input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#tagsContainer .tag-bubble').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.view-toggle .btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.view-toggle .btn[data-view="grid"]').classList.add('active');
+    render();
   });
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-  }
-
-  function timeAgo(d) {
-    if (!d) return 'never';
-    const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-    return diff === 0 ? 'today' : diff === 1 ? 'yesterday' : diff + ' days ago';
-  }
 
   function sortRepos(repos) {
     return [...repos].sort((a, b) => {
-      if (sortCriterion === 'pushed') return new Date(b.pushedAt||0) - new Date(a.pushedAt||0);
-      if (sortCriterion === 'created') return new Date(b.createdAt||0) - new Date(a.createdAt||0);
-      if (sortCriterion === 'stars') return b.stars - a.stars;
-      if (sortCriterion === 'forks') return b.forks - a.forks;
+      if (sortCriterion === 'updated') return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+      if (sortCriterion === 'created') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      if (sortCriterion === 'name') return (a.name || '').localeCompare(b.name || '');
+      if (sortCriterion === 'stars') return (b.stars || 0) - (a.stars || 0);
+      if (sortCriterion === 'forks') return (b.forks || 0) - (a.forks || 0);
       return 0;
     });
   }
 
   function card(repo) {
-    const div = document.createElement('div'); div.className = 'repo-card';
+    const div = document.createElement('div');
+    div.className = 'repo-card';
     const name = escapeHtml(repo.name);
-    const desc = repo.description ? escapeHtml(repo.description) : '<i>No description</i>';
+    const desc = repo.description ? escapeHtml(repo.description) : '<i style="opacity:0.6">No description</i>';
     const tagsHtml = repo.tags.map(t => '<span class="repo-tag">' + escapeHtml(t) + '</span>').join('');
     const langName = repo.language ? escapeHtml(repo.language.name) : 'Unknown';
     const langColor = repo.language ? escapeHtml(repo.language.color) : '#888';
     const commitMsg = repo.lastCommit ? escapeHtml(repo.lastCommit.message) : '';
     const commitAuthor = repo.lastCommit ? escapeHtml(repo.lastCommit.author) : '';
     const commitDate = repo.lastCommit ? timeAgo(repo.lastCommit.date) : '';
-    div.innerHTML = `
-      <div class="repo-header">
-        <a href="${escapeHtml(repo.url)}" target="_blank" class="repo-title">${name}</a>
-        <div class="badges">${repo.isPrivate?'<span class="badge private">Private</span>':''}${repo.isFork?'<span class="badge fork">Fork</span>':''}${repo.isArchived?'<span class="badge archived">Archived</span>':''}</div>
-      </div>
-      <p class="repo-desc">${desc}</p>
-      <div class="repo-meta-tags">${tagsHtml}</div>
-      <div class="repo-lang"><span class="lang-dot" style="background-color:${langColor}"></span><span>${langName}</span></div>
-      <div class="indicators">
-        <div class="indicator-item">⭐ ${repo.stars}</div><div class="indicator-item">🍴 ${repo.forks}</div>
-        <div class="indicator-item">🐛 ${repo.issues}</div><div class="indicator-item">🔀 ${repo.pullRequests}</div>
-      </div>
-      ${repo.lastCommit ? '<div class="repo-commit"><div class="repo-commit-msg" title="'+commitMsg+'">'+commitMsg+'</div><div style="font-size:0.75rem">By '+commitAuthor+' · '+commitDate+'</div></div>' : '<div class="repo-commit" style="font-style:italic">No commit details</div>'}
-    `;
+    div.innerHTML =
+      '<div class="repo-header">' +
+        '<a href="' + escapeHtml(repo.url) + '" target="_blank" rel="noopener" class="repo-title">' + name + '</a>' +
+        '<div class="badges">' +
+          (repo.isPrivate ? '<span class="badge private">Private</span>' : '') +
+          (repo.isFork ? '<span class="badge fork">Fork</span>' : '') +
+          (repo.isArchived ? '<span class="badge archived">Archived</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<p class="repo-desc">' + desc + '</p>' +
+      (tagsHtml ? '<div class="repo-meta-tags">' + tagsHtml + '</div>' : '') +
+      '<div class="repo-lang"><span class="lang-dot" style="background-color:' + langColor + '"></span><span>' + langName + '</span></div>' +
+      '<div class="indicators">' +
+        '<div class="indicator-item">⭐ ' + (repo.stars || 0) + '</div>' +
+        '<div class="indicator-item">🍴 ' + (repo.forks || 0) + '</div>' +
+        '<div class="indicator-item">🐛 ' + (repo.issues || 0) + '</div>' +
+        '<div class="indicator-item">🔀 ' + (repo.pullRequests || 0) + '</div>' +
+      '</div>' +
+      '<div class="repo-times">' +
+        '<span>Created ' + timeAgo(repo.createdAt) + '</span>' +
+        '<span>· Updated ' + timeAgo(repo.updatedAt) + '</span>' +
+      '</div>' +
+      (repo.lastCommit
+        ? '<div class="repo-commit"><div class="repo-commit-msg" title="' + commitMsg + '">' + commitMsg + '</div><div>By ' + commitAuthor + ' · ' + commitDate + '</div></div>'
+        : '<div class="repo-commit" style="font-style:italic;opacity:0.6">No commit details</div>');
     return div;
   }
 
@@ -390,29 +542,47 @@
     grid.innerHTML = '';
     grid.classList.toggle('list-view', currentViewMode === 'list');
 
-    let filtered = REPO_DATA.filter(r => {
-      const q = (r.name + (r.description||'') + r.tags.join('')).toLowerCase();
-      if (searchFilter && !q.includes(searchFilter)) return false;
-      if (selectedLang !== 'ALL' && (!r.language || r.language.name !== selectedLang)) return false;
+    const filtered = REPO_DATA.filter(r => {
+      if (searchFilter) {
+        const q = (r.name + (r.description || '') + r.tags.join(' ')).toLowerCase();
+        if (!q.includes(searchFilter)) return false;
+      }
+      if (selectedLangs.size > 0 && (!r.language || !selectedLangs.has(r.language.name))) return false;
       if (selectedTag && !r.tags.includes(selectedTag)) return false;
-      if (relativeFilter === 'fork' && !r.isFork) return false;
-      if (relativeFilter === 'source' && r.isFork) return false;
-      if (relativeFilter === 'private' && !r.isPrivate) return false;
-      if (relativeFilter === 'public' && r.isPrivate) return false;
+      if (originFilter === 'source' && r.isFork) return false;
+      if (originFilter === 'fork' && !r.isFork) return false;
+      if (visibilityFilter === 'public' && r.isPrivate) return false;
+      if (visibilityFilter === 'private' && !r.isPrivate) return false;
+      if (timeFilter !== 'all') {
+        const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+        const recent = (nowMs - updated) < ONE_YEAR_MS;
+        if (timeFilter === 'recent' && !recent) return false;
+        if (timeFilter === 'older' && recent) return false;
+      }
       return true;
     });
+
+    document.getElementById('resultCount').textContent = filtered.length + ' / ' + REPO_DATA.length + ' repos';
 
     const sorted = sortRepos(filtered);
 
     if (sorted.length === 0) {
-      grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);font-size:1.1rem">No repositories match your filters.</div>';
+      grid.innerHTML = '<div class="empty-state">No repositories match your filters.<br><span style="font-size:0.85rem;opacity:0.7">Try resetting the filters.</span></div>';
       return;
     }
 
     if (currentViewMode === 'grouped') {
-      sorted.forEach(r => { const l = r.language ? r.language.name : 'Unknown'; if (!grp[l]) grp[l] = []; grp[l].push(r); });
+      const grp = {};
+      sorted.forEach(r => {
+        const l = r.language ? r.language.name : 'Unknown';
+        if (!grp[l]) grp[l] = [];
+        grp[l].push(r);
+      });
       Object.keys(grp).sort().forEach(l => {
-        const h = document.createElement('div'); h.className = 'group-header'; h.textContent = l + ' (' + grp[l].length + ')'; grid.appendChild(h);
+        const h = document.createElement('div');
+        h.className = 'group-header';
+        h.textContent = l + ' (' + grp[l].length + ')';
+        grid.appendChild(h);
         grp[l].forEach(r => grid.appendChild(card(r)));
       });
     } else {
@@ -420,45 +590,57 @@
     }
   }
 
+  // Charts — fixed-height wrapper prevents the resize-loop height growth bug
   let langChart, actChart;
-  function recreateCharts() {
+  function buildLangChart(ts) {
+    const lc = {};
+    REPO_DATA.forEach(r => { const n = r.language ? r.language.name : 'Unknown'; lc[n] = (lc[n] || 0) + 1; });
+    const top = Object.entries(lc).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const others = Object.entries(lc).sort((a, b) => b[1] - a[1]).slice(8).reduce((s, x) => s + x[1], 0);
+    const labels = top.map(x => x[0]); const data = top.map(x => x[1]);
+    if (others > 0) { labels.push('Other'); data.push(others); }
+    return new Chart(document.getElementById('langChart').getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#8b5cf6','#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#14b8a6','#6b7280','#9ca3af'], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { color: ts, boxWidth: 12, padding: 10 } } } }
+    });
+  }
+  function buildActivityChart(ts, gridColor) {
+    const mp = {};
+    REPO_DATA.forEach(r => {
+      if (!r.pushedAt) return;
+      const d = new Date(r.pushedAt);
+      const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      mp[k] = (mp[k] || 0) + 1;
+    });
+    const months = Object.keys(mp).sort().slice(-12);
+    return new Chart(document.getElementById('activityChart').getContext('2d'), {
+      type: 'bar',
+      data: { labels: months, datasets: [{ label: 'Repos Pushed', data: months.map(m => mp[m]), backgroundColor: '#8b5cf6', borderRadius: 6, maxBarThickness: 40 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: ts } }, y: { grid: { color: gridColor }, ticks: { color: ts, precision: 0 } } }, plugins: { legend: { display: false } } }
+    });
+  }
+  function themeColors() {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
+    return { ts: isDark ? '#9ca3af' : '#4b5563', grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' };
+  }
+  function initCharts() {
     if (typeof Chart === 'undefined') { console.warn('Chart.js not loaded — skipping charts'); return; }
-    const ts = isDark ? '#9ca3af' : '#4b5563';
-    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-
-    if (!langChart) {
-      const lc = {};
-      REPO_DATA.forEach(r => { const n = r.language ? r.language.name : 'Unknown'; lc[n] = (lc[n]||0)+1; });
-      const top = Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-      langChart = new Chart(document.getElementById('langChart').getContext('2d'), {
-        type: 'doughnut',
-        data: { labels: top.map(x=>x[0]), datasets: [{ data: top.map(x=>x[1]), backgroundColor: ['#6d28d9','#3b82f6','#10b981','#f59e0b','#ec4899','#374151','#6b7280','#9ca3af'], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: ts } } } }
-      });
-    } else {
-      langChart.options.plugins.legend.labels.color = ts;
-      langChart.update();
-    }
-
-    if (!actChart) {
-      const mp = {};
-      REPO_DATA.forEach(r => { if (!r.pushedAt) return; const d = new Date(r.pushedAt); const k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); mp[k]=(mp[k]||0)+1; });
-      const months = Object.keys(mp).sort().slice(-12);
-      actChart = new Chart(document.getElementById('activityChart').getContext('2d'), {
-        type: 'bar',
-        data: { labels: months, datasets: [{ label: 'Repos Pushed', data: months.map(m=>mp[m]), backgroundColor: '#8b5cf6', borderRadius: 6 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: ts } }, y: { grid: { color: gridColor }, ticks: { color: ts } } }, plugins: { legend: { display: false } } }
-      });
-    } else {
-      actChart.options.scales.x.ticks.color = ts;
-      actChart.options.scales.y.ticks.color = ts;
-      actChart.options.scales.y.grid.color = gridColor;
-      actChart.update();
-    }
+    const c = themeColors();
+    langChart = buildLangChart(c.ts);
+    actChart = buildActivityChart(c.ts, c.grid);
+  }
+  function updateChartsTheme() {
+    if (!langChart || !actChart) return;
+    const c = themeColors();
+    langChart.options.plugins.legend.labels.color = c.ts; langChart.update();
+    actChart.options.scales.x.ticks.color = c.ts;
+    actChart.options.scales.y.ticks.color = c.ts;
+    actChart.options.scales.y.grid.color = c.grid;
+    actChart.update();
   }
 
-  recreateCharts();
+  initCharts();
   render();
 </script>
 </html>
