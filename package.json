@@ -1,0 +1,15 @@
+{
+  "name": "pekaboo-repo-info",
+  "version": "1.0.0",
+  "description": "Scans all user repos and builds a dashboard page",
+  "main": "scripts/build.js",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:mock": "MOCK_MODE=true node scripts/build.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "undici": "^6.19.0"
+  }
+}

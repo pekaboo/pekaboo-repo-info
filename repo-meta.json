@@ -1,0 +1,10 @@
+{
+  "autostream": {
+    "description": "An automated system to process live stream data feeds",
+    "tags": ["Automation", "Streaming", "JavaScript"]
+  },
+  "WindowLayout": {
+    "description": "Window position controller for macOS workspaces",
+    "tags": ["macOS", "Desktop", "Utility"]
+  }
+}
