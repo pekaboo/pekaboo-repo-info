@@ -1,0 +1,29 @@
+query($cursor: String) {
+  rateLimit { cost remaining nodeCount }
+  viewer {
+    repositories(first: 50, after: $cursor, ownerAffiliations: [OWNER], orderBy: {field: PUSHED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        name nameWithOwner description url homepageUrl
+        isPrivate isFork isArchived isTemplate
+        createdAt updatedAt pushedAt
+        stargazerCount forkCount
+        diskUsage
+        primaryLanguage { name color }
+        languages(first: 8, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size node { name color } } }
+        repositoryTopics(first: 10) { nodes { topic { name } } }
+        licenseInfo { spdxId name }
+        issues(states: OPEN) { totalCount }
+        pullRequests(states: OPEN) { totalCount }
+        releases(first: 1, orderBy: {field: CREATED_AT, direction: DESC}) { totalCount nodes { tagName publishedAt } }
+        defaultBranchRef {
+          name
+          target { ... on Commit {
+            history(first: 3) { totalCount nodes { messageHeadline committedDate author { name } oid } }
+          } }
+        }
+      }
+    }
+  }
+}
