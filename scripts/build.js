@@ -128,7 +128,7 @@ async function fetchGraphQL(token, cursor = null) {
             defaultBranchRef {
               name
               target { ... on Commit {
-                history(first: 100) { nodes { messageHeadline committedDate author { name } } }
+                history(first: 30) { nodes { messageHeadline committedDate author { name } } }
               } }
             }
           }
