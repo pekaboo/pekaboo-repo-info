@@ -110,7 +110,7 @@ async function fetchGraphQL(token, cursor = null) {
   const query = `
     query($cursor: String) {
       viewer {
-        repositories(first: 100, after: $cursor, ownerAffiliations: [OWNER], orderBy: {field: PUSHED_AT, direction: DESC}) {
+        repositories(first: 50, after: $cursor, ownerAffiliations: [OWNER], orderBy: {field: PUSHED_AT, direction: DESC}) {
           pageInfo {
             hasNextPage
             endCursor
@@ -128,7 +128,7 @@ async function fetchGraphQL(token, cursor = null) {
             defaultBranchRef {
               name
               target { ... on Commit {
-                history(first: 30) { nodes { messageHeadline committedDate author { name } } }
+                history(first: 20) { nodes { messageHeadline committedDate author { name } } }
               } }
             }
           }
